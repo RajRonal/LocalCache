@@ -2,53 +2,66 @@ package cacheProvider
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"sync"
 	"time"
 )
 
 type Caches struct {
 	Cache map[string]*Result
-	sync.Mutex
+	lx    sync.Mutex
 }
+
 type AppCache struct {
 	Client Caches
 }
 
 type Result struct {
 	value             []byte
-	defaultExpiration time.Duration
+	defaultExpiration time.Time
 }
 
 func InitCache() *Caches {
 	return &Caches{Cache: make(map[string]*Result)}
 }
 
-func (r *Caches) Set(key string, data interface{}, expirationTime time.Duration) error {
-	r.Lock()
-	defer r.Unlock()
+func (r *Caches) Set(key string, data interface{}, expirationTime time.Time) (interface{}, error) {
+	var value Result
+	var result interface{}
+	r.lx.Lock()
+	defer r.lx.Unlock()
 	bytes, err := json.Marshal(data)
 	if err != nil {
-		return err
+		return value, err
 	}
 
-	var value Result
 	value.value = bytes
 	value.defaultExpiration = expirationTime
 	r.Cache[key] = &value
-	return nil
+	//fmt.Println("before post query", value.defaultExpiration)
+	err = json.Unmarshal(value.value, &result)
+	if err != nil {
+		return value, err
+	}
+
+	return result, nil
 
 }
 
 func (r *Caches) Get(key string) ([]byte, error) {
-	Result, exist := r.Cache[key]
-	fmt.Println(r.Cache[key])
+	result, exist := r.Cache[key]
+	var err = errors.New("Expired")
+	fmt.Println(err)
+	if result.defaultExpiration.Before(time.Now()) {
+		logrus.Error("Out of time")
+		return nil, err
+	}
+
 	if !exist {
 		return nil, nil
 	}
 
-	//var data interface{}
-	//_ = json.Unmarshal(Result.value, data)
-
-	return Result.value, nil
+	return result.value, nil
 }

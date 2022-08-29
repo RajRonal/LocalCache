@@ -2,6 +2,7 @@ package models
 
 import (
 	"github.com/gofrs/uuid"
+	"time"
 )
 
 //type CacheInt interface {
@@ -10,8 +11,9 @@ import (
 //}
 
 type ToDo struct {
-	Title string `json:"title"`
-	Body  string `json:"body"`
+	Title      string    `json:"title"`
+	Body       string    `json:"body"`
+	ExpiryTime time.Time `json:"expiryTime"`
 }
 type UserId struct {
 	ID uuid.UUID `json:"id"`
